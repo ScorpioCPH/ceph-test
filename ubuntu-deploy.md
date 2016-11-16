@@ -72,6 +72,43 @@ we need 4 hosts (or virtual machines) to deploy a ceph cluster with 4 nodes (1 `
 	ceph.client.admin.keyring
     ```
 
+####Add OSDs
+
+- **create a directory on storage node**
+
+	```
+	$ ssh {storage-node}
+	$ sudo mkdir /var/local/osd0
+	$ exit
+	```
+
+- **prepare this osd from admin node**
+
+	```
+	ceph-deploy osd prepare {storage-node}:/var/local/osd0
+	```
+
+- **activate this osd from admin node**
+
+	```
+	ceph-deploy osd activate {storage-node}:/var/local/osd0
+	```
+
+- **copy configuration file and admin key**
+
+	```
+	ceph-deploy admin {admin-node} {monitor-node} {storage1-node} {storage2-node}
+	```
+- **check your cluster’s health**
+
+	```
+	$ ceph health
+	HEALTH_OK
+	```
+	Your cluster should return an `active + clean` state when it has finished peering.
+
+	If there any errors occur on adding osd, check [trouble shooting](#trouble-shooting) section below.
+
 ####Config block device on `client` node
 
 - **use ceph-deploy to install ceph on your `client` node from `admin` node**
@@ -144,9 +181,47 @@ we need 4 hosts (or virtual machines) to deploy a ceph cluster with 4 nodes (1 `
 	```
 Now you can use `/{local-dir}` as block stroge.
 
-####Trouble shooting
+#### <a name="trouble-shooting"></a> Trouble shooting
 
-**map rbd image error as shown below**
+######check cluster’s health
+
+```
+$ ceph health
+HEALTH_OK
+```
+
+######show cluster status
+
+```
+$ ceph --status
+    cluster ec4c6fc5-d84b-417c-93cb-24e85b37e58e
+     health HEALTH_OK
+     monmap e1: 1 mons at {s2=192.168.1.25:6789/0}
+            election epoch 3, quorum 0 s2
+     osdmap e26: 4 osds: 2 up, 2 in
+            flags sortbitwise
+      pgmap v302: 64 pgs, 1 pools, 1163 MB data, 562 objects
+            22267 MB used, 1145 GB / 1177 GB avail
+                  64 active+clean
+```
+And you can also use `ceph --watch` to watch live cluster changes
+
+######file name too long on activate osd
+
+By check ceph log on storage node machine which osd is located (e.g., `/var/log/ceph/*.log`), this error message `ERROR: osd init failed: (36) File name too long` will be detected, you can fix it by setting the following configuration option on `ceph.conf`:
+
+```
+osd max object name len = 256
+osd max object namespace len = 64
+```
+Then, copy config file to each node
+
+```
+$ ceph-deploy admin {admin-node} {storage-node}
+```
+
+
+######map rbd image error as shown below
 
 ```
 $ sudo rbd map {image-name} --name client.admin -m {monitor-node-ip} -k /etc/ceph/ceph.client.admin.keyring
@@ -156,7 +231,7 @@ In some cases useful info is found in syslog - try "dmesg | tail" or so.
 rbd: map failed: (6) No such device or address
 ```
 
-if there is `rbd: sysfs write failed` error occur as above, you should disable some features and retry:
+If there is `rbd: sysfs write failed` error occur as above, you should disable some features and retry:
 
 1. check image features
 
