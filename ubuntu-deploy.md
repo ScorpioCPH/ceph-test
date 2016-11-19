@@ -136,7 +136,7 @@ we need 4 hosts (or virtual machines) to deploy a ceph cluster with 4 nodes (1 `
   - map the image to a block device
 	
 	```
-	$ sudo rbd map {image-name} --name client.admin -m 192.168.1.25 -k /etc/ceph/ceph.client.admin.keyring
+	$ sudo rbd map {image-name} --name client.admin -m {monitor-node-ip} -k /etc/ceph/ceph.client.admin.keyring
 	/dev/rbd0
 	```
 	
@@ -259,6 +259,6 @@ If there is `rbd: sysfs write failed` error occur as above, you should disable s
 3. retry map image
 
 	```
-	$ sudo rbd map {image-name} --name client.admin -m 192.168.1.25 -k /etc/ceph/ceph.client.admin.keyring
+	$ sudo rbd map {image-name} --name client.admin -m {monitor-node-ip} -k /etc/ceph/ceph.client.admin.keyring
 	/dev/rbd0
 	```
